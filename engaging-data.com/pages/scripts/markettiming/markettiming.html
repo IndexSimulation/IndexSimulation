@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html>
+
+<!-- Mirrored from engaging-data.com/pages/scripts/markettiming/markettiming.html by HTTrack Website Copier/3.x [XR&CO'2014], Mon, 18 Jan 2021 20:15:05 GMT -->
+<head>
+	<title></title>
+
+	<script src="../csv.js"></script>
+	<script src="../papaparse.min.js"></script>
+	<script src="../arrayfunctions.js"></script>
+	<script src="../../../../cdn.plot.ly/plotly-latest.min.js"></script>
+	<link rel="stylesheet" href="../../../../maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+		<script src="../../../../ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	  	<script src="../../../../maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+	  	<script src="../../../../cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.0.0/bootstrap-slider.js"></script>
+	  	<link rel="stylesheet" href="../../../../cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.0.0/css/bootstrap-slider.css">
+
+	<style>
+		.col-xs-6 {
+			font-family: sans-serif;
+			font-size: 16px;
+			font-weight: bold;
+		}
+
+		#title {
+			font-family: sans-serif;
+			font-size: 20px;
+			font-weight: bold;
+			text-align: center;
+		}
+
+		.btn {
+			font-weight: bold;
+			font-size:12px;
+		}
+
+		.container {
+			background-color: #eeeeee;
+			padding:10px;
+			border-radius:10px;
+
+		}
+		
+		#speedslidercontainer{
+			background-color: #c94ac9;
+			padding: 8px 2px 8px 2px;
+			border-radius:5px;
+			width:100px;
+			border-color: #8d8dfc;
+			border-width: 1px;
+			font-size: 12px;
+			color: white;
+		}
+
+		#datacontainer{
+			background-color: grey;
+			font-weight:bold;
+			padding: 8px 5px 8px 5px;
+			border-radius:5px;
+			display: inline-block;
+			border-color: #8d8dfc;
+			border-width: 1px;
+			font-size: 12px;
+			color: white;
+		}
+
+		.textbox1 {
+			font-size:12px;
+		}
+	</style>
+
+	
+
+</head>
+<body>
+<div class="container">
+	<div class="row">
+		<div class="col-xs-12" id="title">
+			Market Timing Game
+		</div>
+		<div class="col-xs-12">
+			<div class="textbox1">
+			 	
+
+
+			 		<div class="panel-group" id="accordion">
+						  <div class="panel panel-default">
+						    <div class="panel-heading"><h2 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#collapse1">
+						    Motivation</a></h2></div>
+						    <div id="collapse1" class="panel-collapse collapse in">
+						      <div class="panel-body">Index investing is a simple, low-cost and effective investment approach where you invest in index funds that represent portions or the entirety of the market (like the S&P500).  It doesn't require you to make decisions about which stocks to invest in or when to buy and sell.  Market timing represents one deviation from this approach, in which the investor tries to predict when the market will go up or down and buy and sell their investments accordingly. This is a more difficult approach and in many, most(?) cases tends to underperform index investing.  This game attempts to show the difficulty of market timing on real, historical data from the S&P500 (between 1950 and 2018), either sequential returns from a real period ("historical") or probabilistic returns based on the distribution of returns over the 68 year dataset ("Monte Carlo").  </div>
+						    </div>
+						  </div>
+						  <div class="panel panel-default">
+						    <div class="panel-heading">
+						      <h2 class="panel-title">
+						        <a data-toggle="collapse" data-parent="#accordion" href="#collapse2">
+						        Instructions</a>
+						      </h2>
+						    </div>
+						    <div id="collapse2" class="panel-collapse collapse">
+						      <div class="panel-body">You will start fully invested in the market, with $100,000 (when you push the <b>"Start/Pause"</b> button).  You can sell all of your investments by pushing the <b>"Sell"</b> button and buy back in by pushing the <b>"Buy"</b> button.  At the beginning, you can only sell.  Once you've sold, you can then only buy.  See if you can outperform the market by selling high and buying low.  The game will last for about 3 years (750 market days), after which you can extend the game or restart with another random, historical period (or Monte Carlo simulation).</div>
+						    </div>
+						  </div>
+						  <div class="panel panel-default">
+						    <div class="panel-heading">
+						      <h2 class="panel-title">
+						        <a data-toggle="collapse" data-parent="#accordion" href="#collapse3">
+						        Results</a>
+						      </h2>
+						    </div>
+						    <div id="collapse3" class="panel-collapse collapse">
+						      <div class="panel-body"><span id="result">None yet.</span></div>
+						    </div>
+						  </div>
+						</div>
+
+			 		
+			</div>
+		</div>
+		<div class="col-xs-12">
+			<button type="button" class="btn btn-primary" onclick="toggle();"> Start/Pause</button>
+			<button type="button" onclick="sell();" class="btn btn-danger"	> Sell</button>
+			<button type="button" onclick="buy();" class="btn btn-success"> Buy</button>
+			<button type="button" onclick="extendgame();" class="btn btn-info"> Extend Game</button>
+			<button type="button" onclick="reset();" class="btn btn-warning"> Reset Game</button>
+			<span id="speedslidercontainer"><b>  Slow <input id="speedSlider" data-slider-id='ex1Slider' type="text" data-slider-min="1" data-slider-max="4" data-slider-step="1" data-slider-value="2" value="2"/> Fast  </b></span>
+		</div>	
+		<div class="col-xs-12" >
+				<span id="datacontainer">Game Data: 
+				<label class="radio-inline"><input type="radio" name="optradio" id="histradio" checked value="0">Historical</label>
+			<label class="radio-inline"><input type="radio" name="optradio" id="MCradio" value="1">Monte Carlo</label></span>
+		</div>
+		
+		<div class="col-xs-12">
+			<div class="col-xs-6" >Market Balance: <span id="marketbal"></span></div>
+			<div class="col-xs-6">Your Balance: <span id="yourbal"></span></div>
+			<div class="col-xs-10">
+				<div id="myDiv"></div>
+			</div>
+		</div>
+
+	</div>
+</div>
+<script>
+
+	//read csv file into array 
+	Papa.parse("sp500game.csv", {
+		download: true,
+		complete: function(results) {
+			// console.log(results.data);
+			csvColumns=reshape2DArray(results.data);  // turn tall array (17000 x 3) into wide (3x17000)
+			drawInitial();
+		}
+	});
+
+
+
+	var initialbalance=100000;
+	var balance=initialbalance;
+	var yourbalance=balance;
+	var gameType=0;  //0 is normal historical data based game, 1 is montecarlo game
+	var initialvalue;
+	var indexvalue;
+	var startingindex;
+	var totalDays;
+	var periodDays=2000;
+	var startdate;
+	var j=1;
+	var stopflag=1;
+	var buyflag=1;
+	var gamedays=750;  //length of game in market days
+	var ATH;
+
+	document.getElementById('marketbal').innerHTML = "$"+Math.round(balance).toLocaleString(); 
+	document.getElementById('yourbal').innerHTML = "$"+Math.round(yourbalance).toLocaleString();
+
+	function initializeValues(){
+		j=1;
+		if (document.getElementById('histradio').checked) {
+			gameType=0;
+		} else if (document.getElementById('MCradio').checked){
+			gameType=1;
+		}
+		console.log("gametype: "+gameType)
+		ATH=initialbalance+(Math.random()*10000-4000); //used for montecarlo game
+		balance=initialbalance;
+		yourbalance=initialbalance;
+		buyflag=1;
+		totalDays = csvColumns[0].length;
+		startingindex=Math.round(Math.random()*(totalDays-periodDays-1));
+		initialvalue= csvColumns[1][startingindex];
+		indexvalue=100;
+		sellperiodjson=[];  // read by the "shape" area of the layout object
+		sellperiodarrays=[];  //pairs of x values which indicate sell and buy ends of periods
+		numsellperiods=0;
+		startdate=csvColumns[0][startingindex+1];
+		console.log(startingindex+" "+startdate);
+		base=0;  //base is used to extend graph (it's 0 on first game, but if you want to extend game, it's equal to length of the first game)
+
+	}
+
+
+
+
+
+
+	function drawInitial(){
+		
+
+		var numDays = csvColumns[0].length;
+		if (csvColumns[2][startingindex]==1){
+			var startATH = initialvalue;	
+		} else {
+			var startATH = null;
+		}
+
+		var data = [
+			{
+			    x: [0],
+			    y: [100],
+			    mode: 'lines',
+			    name: "S&P500 index"
+			  },
+			  {
+			    x: [0],
+			    y: [null],
+			    mode: 'markers',
+			    name: "all-time-high",
+			    marker: {
+					color: 'red',
+					size: 12
+				},
+			    connectgaps: false
+			  },
+			  {
+			    x: [0,25],
+			    y: [90,110],
+			    mode: 'lines',
+			    name: "",
+			    line: {
+				    color: 'rgb(55, 128, 191)',
+				    width: 0,
+				    alpha:0
+				},
+			    showlegend:false,
+			    connectgaps: false
+			  }
+
+			];
+
+		var layout = {
+			autosize: false,
+			paper_bgcolor: '#eeeeee',
+  			plot_bgcolor: '#eeeeee',
+			width: 700,
+			height: 400,
+			margin: {
+			    l: 70,
+			    r: 10,
+			    b: 40,
+			    t: 20,
+			    pad: 4
+			},
+			legend: {
+			    x: .08,
+			    y: 1
+			  },
+			  xaxis: {
+			    title: 'Market Days',
+			    fixedrange: true,
+			    titlefont: {
+			      size: 15,
+			      color: '#7f7f7f'
+			    }
+			  },
+			  yaxis: {
+			    title: 'Stock Market Index (starting point = 100)',
+			    titlefont: {
+			      size: 15,
+			      color: '#7f7f7f'
+			    },
+			    fixedrange: true
+			  },
+			  annotations: [{
+			    xref: 'paper',
+			    yref: 'paper',
+			    x: .9,
+			    xanchor: 'right',
+			    y: .05,
+			    yanchor: 'bottom',
+			    text: '<b>engaging-data.com</b>',
+			    showarrow: false,
+			    font: {
+			        family: 'Arial',
+			        size: 16,
+			        color: 'darkblue',
+
+			      }
+			  }]
+
+		};
+
+		Plotly.newPlot('myDiv', data, layout,{displayModeBar: false});
+	}
+
+	var time=200;
+	var newtime;
+
+	var changespeedflag = 0;
+	var speedlevel;
+
+	function extendGraph(num=750,time){
+		$(".panel-collapse").collapse("hide");
+
+		var interval = setInterval(function() {
+
+			if (gameType==1){
+				startingindex=Math.round(Math.random()*(totalDays-periodDays-1));
+			}
+
+			var periodmultiplier=csvColumns[1][j+startingindex]/csvColumns[1][j+startingindex-1];  
+			speedlevel = document.getElementById("speedSlider").value;
+			
+
+			// time should go from 0 (fast) to 500 (slow) when using inputs of 1 (slow) to 10 (fast)
+			newtime = 1625-(400*(parseInt(speedlevel)));
+			
+
+			if (newtime!=time){
+				clearInterval(interval);
+				changespeedflag=1;
+				changespeed();
+				return;
+			}
+
+			balance=balance*periodmultiplier;
+			if (buyflag==1){
+				yourbalance=yourbalance*periodmultiplier;  //yourbalance only changes if you are invested
+			}
+
+			if (yourbalance>balance){
+				document.getElementById('yourbal').style.color="green";
+			} else if (yourbalance<balance){
+				document.getElementById('yourbal').style.color="red";
+			} else if (yourbalance=balance) {
+				document.getElementById('yourbal').style.color="black";
+			}
+
+			indexvalue=indexvalue*periodmultiplier;
+
+			document.getElementById('marketbal').innerHTML = "$"+Math.round(balance).toLocaleString(); 
+			document.getElementById('yourbal').innerHTML = "$"+Math.round(yourbalance).toLocaleString();
+
+		  if (stopflag){
+		  	clearInterval(interval);
+		  	return;
+		  }
+
+		  Plotly.extendTraces(myDiv, {x: [[j+base]],  y: [[indexvalue]]}, [0]);  //add x and y to current trace
+
+		  //in montecarlo game, check if market is at ATH and if so add ATH marker
+		  if (gameType==1){
+		  	if (balance>ATH){
+			  	Plotly.extendTraces(myDiv, {x: [[j+base]], y: [[indexvalue]]}, [1]);
+			  	ATH=balance;
+			} else{
+				Plotly.extendTraces(myDiv, {x: [[j+base]], y: [[null]]}, [1]);
+			}	
+		  }
+		  
+		  else if (gameType=0){
+			  if (csvColumns[2][j+startingindex]==1){      // check for all time high flag =1
+			  	Plotly.extendTraces(myDiv, {x: [[j+base]], y: [[indexvalue]]}, [1]);
+			  } else {
+			  	Plotly.extendTraces(myDiv, {x: [[j+base]], y: [[null]]}, [1]);
+			  }
+		  }
+		//check if selling, used to highlight period where you aren't invested in market
+		if (buyflag==0){
+			updatesellperiodarrays();
+			generatesellperiods();
+
+			var update = {
+				shapes: sellperiodjson
+			};
+			Plotly.relayout(myDiv, update)
+		}
+
+		// increment to next period
+		  j = j+1;
+		  if(j > num) {
+		  	clearInterval(interval);
+		  	gamerecap();
+		  }
+		}, time);
+	}
+
+	function changespeed(){
+		if (changespeedflag==1){			//checks to see if the game is at the end of one cycle
+			changespeedflag=0;
+			extendGraph(gamedays,newtime);
+		}
+	}
+
+
+	// these next 3 functions define starting/pausing/restarting graph
+	function start(){
+		// this function is used when graph hasn't yet been drawn
+		stopflag=0;
+		initializeValues();
+		// drawInitial();
+		extendGraph(gamedays);
+		console.log("start function: " +stopflag);
+	}
+
+	function stop(){
+		//this pauses the graph
+		stopflag=1;
+		console.log("stop function: "+stopflag);
+	}
+
+	function unpause(){         
+		// this function is used when the graph has been stopped (paused), i.e. previously started
+		stopflag=0;
+		extendGraph(gamedays);
+	}
+
+
+	function reset(){
+		stopflag=0;
+		initializeValues();
+		drawInitial();
+		extendGraph(gamedays);
+	}
+
+	function extendgame(){
+		if (j%gamedays<5){			//checks to see if the game is at the end of one cycle
+			stopflag=0;
+			startingindex=startingindex+j;
+			j=1;
+			base=base+gamedays;
+			extendGraph(gamedays);
+		}
+	}
+
+	function toggle(){
+		console.log("toggle: "+stopflag);
+		if (stopflag==0){
+			stop();
+		} else if (stopflag==1 && j==1){
+			start();
+		} else if (stopflag==1 && j>1){
+			unpause();
+		}
+	}
+
+
+
+	//These next set of functions define how the highlighting periods when the player sells stocks and isn't invested in the market
+
+	var sellperiodjson=[];  // read by the "shape" area of the layout object
+	var sellperiodarrays=[];  //pairs of x values which indicate sell and buy ends of periods
+	var numsellperiods=0;
+
+	function generatesellperiods(){
+		//this is the json for drawing a rectangular shape during the sell periods
+		for (var k=0;k<numsellperiods;k++){
+			sellperiod={type: 'rect',xref: 'x',yref: 'paper',x0:sellperiodarrays[k][0], y0: 0,x1: sellperiodarrays[k][1], y1: 1,fillcolor: '#fcc84e',
+		            opacity: 0.6,line: {width: 0}};
+		    sellperiodjson[k]=sellperiod;
+		}
+	}
+
+
+	function sell(){
+		//sell sets the buyflag to be zero (not buying/holding) and sets up another array for highlighting a sell period
+		if (buyflag==1){
+			buyflag=0;
+			numsellperiods++;
+			sellperiodarrays[numsellperiods-1]=[j+base,j+base];  //the first one should be frozen and the send should be updated until you buy back
+		} 
+	}
+
+
+	function updatesellperiodarrays(){
+		// this updates the end of the greyed out sell period to be the most recent period (this function is only called when buyflag is 0);
+		sellperiodarrays[numsellperiods-1][1]=j+base;
+	}
+
+	function buy(){
+		buyflag=1;
+	}
+
+	function gamerecap(){
+
+		//date
+		// comparison
+		
+		$("#collapse1").collapse("hide");
+		$("#collapse2").collapse("hide");
+		$("#collapse3").collapse("show");
+
+		var relbal = parseInt(yourbalance/balance*100);
+		var gameyears = parseInt((base+j)/250);
+		var totalreturn = (balance/initialbalance*100-100).toFixed(1);
+		var annualreturn = (Math.pow(balance/initialbalance,1/gameyears)*100-100).toFixed(2);
+		var resultstring = "<b>Results:</b> Your ending balance is $" + parseInt(yourbalance).toLocaleString()+". This is ";
+		var net = parseInt(yourbalance-balance);
+		
+		// console.log(net);
+
+		if (net>0){
+			resultstring += relbal-100 + "% higher than if you had stayed fully invested in the market for the entire period ("+gameyears+" years). Congratulations, you outperformed the market by $" + net.toLocaleString() +". Can you do it again?";
+		} else if (net==0 && numsellperiods==0){
+			resultstring += "equal to the balance you would have had if you had stayed fully invested in the market for the entire period ("+gameyears+" years). You equalled the performance of the market because you didn't trade.  Not that interesting, but probably the smartest move.";
+		} else if (net<0){
+			resultstring += 100-relbal + "% lower than if you had stayed fully invested in the market for the entire period ("+gameyears+" years).  You underperformed the market by $" + (-net).toLocaleString() + ". This is not an unexpected result, because market timing isn't easy to do consistently.";
+		}
+
+		if (gameType==1){
+			var gamestring = " Your game used "	+gameyears+" years of market data that is simulated with random draws of daily returns from the historical S&P500 data (1950-2018)."; 		
+		} else if (gameType==0){
+			var gamestring =" Your game used "+gameyears+" years of S&P500 market data starting on "+startdate+".";
+		}
+
+		resultstring += gamestring + " The market returned "+totalreturn+"% during this period or "+annualreturn+"% annually.<br>You can continue this game and try to improve your performance by clicking the <b>'Extend Game'</b> button or start a new game by hitting the <b>Reset Game</b> button.";
+		// console.log(yourbalance + " " + balance + " " + relbal + " " + resultstring);
+		document.getElementById('result').innerHTML =resultstring;
+	}
+
+	var slider = new Slider('#speedSlider', {
+	tooltip_position:'top',
+	tooltip: 'always',
+	formatter: function(value) {
+		return 'speed: ' + value;
+	}
+});
+
+</script>
+
+</body>
+
+<!-- Mirrored from engaging-data.com/pages/scripts/markettiming/markettiming.html by HTTrack Website Copier/3.x [XR&CO'2014], Mon, 18 Jan 2021 20:15:07 GMT -->
+</html>
